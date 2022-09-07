@@ -57,7 +57,7 @@ long int UpTime(int pid);
 // Helpers
 std::string ProcessStatusValue(int pid, std::string key);
 std::string SystemStatValue(std::string key);
-long ProcessStatValue(int pid, int token_position);
+std::string ProcessStatValue(int pid, int token_position);
 
 };  // namespace LinuxParser
 

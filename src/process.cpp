@@ -13,12 +13,15 @@ using std::string;
 using std::to_string;
 using std::vector;
 
-int Process::Pid() { return pid_; }
+int Process::Pid() const { return pid_; }
 
-float Process::CpuUtilization() {
+float Process::CpuUtilization() const{
   long proc_uptime_s = LinuxParser::UpTime(pid_);
+  if (proc_uptime_s == 0) {
+    return 0;
+  }
   long active_jiffies = LinuxParser::ActiveJiffies(Pid());
-  return active_jiffies / sysconf(_SC_CLK_TCK) / proc_uptime_s * 100;
+  return (float)active_jiffies / sysconf(_SC_CLK_TCK) / proc_uptime_s;
 }
 
 string Process::Command() { return LinuxParser::Command(pid_); }
@@ -36,5 +39,5 @@ string Process::User() { return LinuxParser::User(pid_); }
 long int Process::UpTime() { return LinuxParser::UpTime(pid_); }
 
 bool Process::operator<(Process const& a) const {
-  return LinuxParser::Ram(a.pid_) < LinuxParser::Ram(pid_);
+  return a.CpuUtilization() < this->CpuUtilization();
 }

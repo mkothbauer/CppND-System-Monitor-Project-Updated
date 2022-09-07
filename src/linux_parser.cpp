@@ -39,7 +39,7 @@ long LinuxParser::UpTime() {
     std::istringstream linestream(line);
     linestream >> uptime_suspend >> idle;
   }
-  return std::stol(uptime_suspend);  // + std::stol(idle);
+  return std::stol(uptime_suspend);
 }
 
 // BONUS: Update this to use std::filesystem
@@ -137,10 +137,10 @@ long LinuxParser::ActiveJiffies() {
 }
 
 long LinuxParser::ActiveJiffies(int pid) {
-  long utime = LinuxParser::ProcessStatValue(pid, 14);
-  long stime = LinuxParser::ProcessStatValue(pid, 15);
-  long cutime = LinuxParser::ProcessStatValue(pid, 16);
-  long cstime = LinuxParser::ProcessStatValue(pid, 17);
+  long utime = std::stol(LinuxParser::ProcessStatValue(pid, 14));
+  long stime = std::stol(LinuxParser::ProcessStatValue(pid, 15));
+  long cutime = std::stol(LinuxParser::ProcessStatValue(pid, 16));
+  long cstime = std::stol(LinuxParser::ProcessStatValue(pid, 17));
   return utime + stime + cutime + cstime;
 }
 
@@ -182,22 +182,16 @@ string LinuxParser::User(int pid) {
   return user;
 }
 
-long LinuxParser::UpTime(int pid) {
-  string token;
-  std::ifstream stream(LinuxParser::kProcDirectory + std::to_string(pid) +
-                       kStatFilename);
-  if (stream.is_open()) {
-    int i = 0;
-    string line;
-    std::getline(stream, line);
-    std::istringstream linestream(line);
-    while (i < 22) {
-      linestream >> token;
-      ++i;
-    }
+long int LinuxParser::UpTime(int pid) {
+  string proc_start_time_str = ProcessStatValue(pid, 22);
+  long proc_start_time = std::stol(proc_start_time_str);
+  long proc_start_time_s = proc_start_time / sysconf(_SC_CLK_TCK);
+  long sys_uptime_s = UpTime(); 
+  long proc_uptime_s = sys_uptime_s - proc_start_time_s;
+  if (proc_uptime_s == 0) {
+    return sys_uptime_s;
   }
-  long start_time_s = std::stol(token) / sysconf(_SC_CLK_TCK);
-  return LinuxParser::UpTime() - start_time_s;
+  return proc_uptime_s;
 }
 
 //******************* Helper Functions ***********************//
@@ -245,7 +239,7 @@ string LinuxParser::SystemStatValue(string key) {
 }
 
 // returns the value at token_position from the proc/[pid]/stat file
-long LinuxParser::ProcessStatValue(int pid, int token_position) {
+string LinuxParser::ProcessStatValue(int pid, int token_position) {
   string line, value;
   std::ifstream stream(kProcDirectory + std::to_string(pid) + kStatFilename);
   if (stream.is_open()) {
@@ -257,5 +251,8 @@ long LinuxParser::ProcessStatValue(int pid, int token_position) {
       ++i;
     }
   }
-  return stol(value);
+  if (value == "") {
+    value = "0";
+  }
+  return value;
 }
